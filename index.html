@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Agent| 个人数据中枢</title>
+
+    <!-- 核心库: Tailwind CSS & DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 图标库: FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Markdown编辑器: SimpleMDE -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+
+    <!-- 图表库: Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Google Fonts -->
+    <!-- Inter (Apple), Bangers (Pop), Orbitron (Cyberpunk), DotGothic16 (Pixel) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bangers&family=Orbitron:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
+
+    <!-- 配置 Tailwind 扩展 & DaisyUI 主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        pop: ['Bangers', 'cursive'],
+                        cyber: ['Orbitron', 'sans-serif'],
+                        pixel: ['DotGothic16', 'sans-serif'],
+                    },
+                    colors: {
+                        apple: { gray: '#F5F5F7', blue: '#007AFF', text: '#1D1D1F' }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.4s ease-out',
+                        'pulse-glow': 'pulseGlow 2s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        pulseGlow: { '0%, 100%': { boxShadow: '0 0 5px #00ff9f' }, '50%': { boxShadow: '0 0 20px #00ff9f' } }
+                    }
+                }
+            },
+            // DaisyUI 配置
+            daisyui: {
+                themes: [
+                    "light", 
+                    {
+                        // 1. 波普艺术 (Pop Art)
+                        popart: {
+                            "primary": "#FFD700", "secondary": "#FF3333", "accent": "#3366FF",
+                            "neutral": "#000000", "base-100": "#FFFFFF",
+                            "info": "#3abff8", "success": "#36d399", "warning": "#fbbd23", "error": "#f87272",
+                            "--rounded-box": "0", "--rounded-btn": "0", "--rounded-badge": "0", "--tab-radius": "0",
+                        },
+                        // 2. 赛博朋克 (Cyberpunk)
+                        cyberpunk: {
+                            "primary": "#00ff9f",   // 霓虹绿
+                            "secondary": "#ff003c", // 霓虹红
+                            "accent": "#fcee0a",    // 赛博黄
+                            "neutral": "#1a1a1a",   // 深灰
+                            "base-100": "#050505",  // 极黑背景
+                            "info": "#00b8ff",
+                            "success": "#00ff9f",
+                            "warning": "#fcee0a",
+                            "error": "#ff003c",
+                            "--rounded-box": "0.2rem",
+                            "--rounded-btn": "0.2rem",
+                        },
+                        // 3. 动漫像素 (Pixel Art)
+                        pixel: {
+                            "primary": "#6a0dad",   // 像素紫
+                            "secondary": "#ff8c00", // 橙色
+                            "accent": "#00ced1",    // 青色
+                            "neutral": "#2d2d2d",   // 深灰像素块
+                            "base-100": "#fff1e8",  // 复古米色背景
+                            "--rounded-box": "0",
+                            "--rounded-btn": "0",
+                            "--rounded-badge": "0",
+                        }
+                    }
+                ],
+            }
+        }
+    </script>
+
+    <style>
+        /* --- 0. 基础过渡 --- */
+        body {
+            transition: background-color 0.5s ease, color 0.3s ease;
+        }
+        .glass-panel { transition: all 0.3s ease; }
+
+        /* --- 1. 默认 Light (Apple) 风格 --- */
+        [data-theme="light"] body { background-color: #F5F5F7; color: #1D1D1F; }
+        [data-theme="light"] .glass-panel {
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 1rem;
+        }
+        [data-theme="light"] .sidebar-active { background-color: rgba(0, 122, 255, 0.1); color: #007AFF; font-weight: 600; }
+
+        /* --- 2. 波普艺术 (Pop Art) --- */
+        [data-theme="popart"] body {
+            background-color: #ffecec;
+            background-image: radial-gradient(#FF3333 15%, transparent 16%), radial-gradient(#FF3333 15%, transparent 16%);
+            background-size: 20px 20px; background-position: 0 0, 10px 10px;
+            font-family: 'Inter', sans-serif;
+        }
+        [data-theme="popart"] h1, [data-theme="popart"] h2, [data-theme="popart"] h3, [data-theme="popart"] .btn {
+            font-family: 'Inter', sans-serif; font-weight: 900 !important; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        [data-theme="popart"] .glass-panel, [data-theme="popart"] .card, [data-theme="popart"] aside, [data-theme="popart"] header, [data-theme="popart"] input {
+            background: #FFFFFF !important; backdrop-filter: none !important; border: 3px solid #000 !important;
+            border-radius: 0 !important; box-shadow: 6px 6px 0px 0px #000 !important;
+        }
+        [data-theme="popart"] .sidebar-active { background-color: #FFD700 !important; color: #000 !important; border: 2px solid #000; box-shadow: 3px 3px 0px 0px #000; }
+
+        /* --- 3. 赛博朋克 (Cyberpunk) --- */
+        [data-theme="cyberpunk"] body {
+            background-color: #050505;
+            background-image: linear-gradient(rgba(0, 255, 159, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 159, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            font-family: 'Orbitron', sans-serif;
+            color: #e0e0e0;
+        }
+        [data-theme="cyberpunk"] .glass-panel, [data-theme="cyberpunk"] .card, [data-theme="cyberpunk"] aside, [data-theme="cyberpunk"] header {
+            background: rgba(10, 10, 10, 0.85) !important;
+            backdrop-filter: blur(5px) !important;
+            border: 1px solid #00ff9f !important;
+            box-shadow: 0 0 10px rgba(0, 255, 159, 0.2), inset 0 0 20px rgba(0, 255, 159, 0.05) !important;
+            border-radius: 4px !important;
+        }
+        [data-theme="cyberpunk"] h1, [data-theme="cyberpunk"] h2, [data-theme="cyberpunk"] h3 {
+            text-shadow: 0 0 5px #00ff9f;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        [data-theme="cyberpunk"] .btn-primary {
+            background-color: #000 !important; border: 1px solid #00ff9f; color: #00ff9f;
+            text-shadow: 0 0 5px #00ff9f; box-shadow: 0 0 10px rgba(0,255,159,0.3);
+        }
+        [data-theme="cyberpunk"] .btn-primary:hover { background-color: #00ff9f !important; color: #000 !important; }
+        [data-theme="cyberpunk"] .sidebar-active {
+            background: rgba(0, 255, 159, 0.15) !important; color: #00ff9f !important;
+            border-left: 3px solid #00ff9f; box-shadow: 5px 0 15px rgba(0,255,159,0.2);
+        }
+        [data-theme="cyberpunk"] input, [data-theme="cyberpunk"] textarea, [data-theme="cyberpunk"] select {
+            background-color: #000 !important; border: 1px solid #333 !important; color: #00ff9f !important;
+        }
+
+        /* --- 4. 动漫像素 (Pixel Art) --- */
+        [data-theme="pixel"] body {
+            background-color: #fff1e8;
+            font-family: 'DotGothic16', sans-serif;
+            image-rendering: pixelated; /* 虽然对整个body未必生效，但示意 */
+        }
+        [data-theme="pixel"] * { font-family: 'DotGothic16', sans-serif !important; }
+        [data-theme="pixel"] .glass-panel, [data-theme="pixel"] .card, [data-theme="pixel"] aside, [data-theme="pixel"] header {
+            background: #fff !important;
+            border: 4px solid #2d2d2d !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        /* 模拟像素边角 */
+        [data-theme="pixel"] .btn {
+            border: 2px solid #2d2d2d !important;
+            border-radius: 0 !important;
+            box-shadow: 4px 4px 0 #2d2d2d !important; /* 像素阴影 */
+        }
+        [data-theme="pixel"] .btn:active { transform: translate(4px, 4px); box-shadow: none !important; }
+        [data-theme="pixel"] .sidebar-active {
+            background-color: #ffccaa !important; color: #2d2d2d !important;
+            border: 2px dashed #2d2d2d;
+        }
+        [data-theme="pixel"] .badge { border: 2px solid #2d2d2d; border-radius: 0; }
+        [data-theme="pixel"] .avatar { border: 2px solid #2d2d2d; }
+
+        /* --- 通用辅助 --- */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D1D6; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #AEAEB2; }
+        [data-theme="cyberpunk"] ::-webkit-scrollbar-thumb { background: #00ff9f; border-radius: 0; }
+        [data-theme="pixel"] ::-webkit-scrollbar-thumb { background: #2d2d2d; border-radius: 0; }
+        
+        .hidden-view { display: none !important; }
+        .CodeMirror { border-radius: 0.5rem; border-color: #E5E7EB; }
+        [data-theme="popart"] .CodeMirror, [data-theme="pixel"] .CodeMirror { border: 2px solid #000 !important; border-radius: 0 !important; }
+        [data-theme="cyberpunk"] .CodeMirror { background: #000; color: #00ff9f; border: 1px solid #00ff9f !important; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- 全局提示 (Toast) -->
+    <div class="toast toast-top toast-center z-50" id="toast-container"></div>
+
+    <!-- 1. 认证页面 (Auth View) -->
+    <div id="auth-view" class="flex-1 flex items-center justify-center p-4">
+        <div class="card w-full max-w-md shadow-2xl glass-panel animate-slide-up">
+            <div class="card-body">
+                <div class="text-center mb-6">
+                    <div class="avatar placeholder mb-4">
+                        <div id="sidebar-logo-bg" class="bg-neutral text-neutral-content rounded-full w-16 shadow-lg flex items-center justify-center transition-all">
+                            <i class="fa-solid fa-brain text-2xl"></i>
+                        </div>
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-tight">Agent Access</h2>
+                    <p class="text-sm opacity-60">管理你的数字资产与知识</p>
+                </div>
+
+                <!-- 登录/注册 表单切换 -->
+                <div role="tablist" class="tabs tabs-boxed bg-transparent mb-6 p-1 border border-transparent">
+                    <a role="tab" class="tab tab-active transition-all" onclick="toggleAuthMode('login')" id="tab-login">登录</a>
+                    <a role="tab" class="tab transition-all" onclick="toggleAuthMode('register')" id="tab-register">注册</a>
+                </div>
+
+                <form id="auth-form" onsubmit="handleAuth(event)">
+                    <div class="form-control">
+                        <label class="label"><span class="label-text font-bold">邮箱 / 手机号</span></label>
+                        <input type="text" placeholder="user@example.com" class="input input-bordered bg-white/60 focus:bg-white transition-colors" required />
+                    </div>
+                    <div class="form-control mt-4">
+                        <label class="label"><span class="label-text font-bold">密码</span></label>
+                        <div class="relative">
+                            <input type="password" id="password-input" placeholder="••••••••" class="input input-bordered w-full bg-white/60 focus:bg-white" required />
+                            <button type="button" class="absolute right-3 top-3 text-gray-400 hover:text-gray-600" onclick="togglePassword()">
+                                <i class="fa-regular fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="register-fields" class="hidden mt-4 overflow-hidden transition-all duration-300">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text font-bold">验证码</span></label>
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="123456" class="input input-bordered flex-1 bg-white/60" />
+                                <button type="button" class="btn btn-outline btn-sm h-12" id="btn-code" onclick="sendCode()">获取验证码</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-control mt-8">
+                        <button type="submit" class="btn btn-primary shadow-lg text-white rounded-xl h-12 text-lg font-bold">
+                            <span id="auth-btn-text">进入系统</span>
+                            <span class="loading loading-spinner loading-sm hidden" id="auth-loading"></span>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- 登录页的主题切换按钮 -->
+                <div class="absolute top-4 right-4">
+                     <button class="btn btn-circle btn-ghost btn-sm" onclick="toggleTheme()" title="切换主题">
+                        <i class="fa-solid fa-palette text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 主后台布局 (Main Layout) -->
+    <div id="main-layout" class="hidden-view flex h-screen overflow-hidden">
+        
+        <!-- 侧边栏 (Sidebar) -->
+        <aside class="w-64 glass-panel flex flex-col hidden md:flex z-20 shadow-lg border-r border-white/40 m-0 rounded-none md:rounded-xl md:m-2 md:mb-2 h-auto">
+            <div class="p-6 flex items-center gap-3">
+                <div id="sidebar-logo-bg" class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md transition-all">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <span class="font-bold text-lg tracking-tight">Qiuhe Agent</span>
+            </div>
+            
+            <nav class="flex-1 px-4 space-y-2 py-4">
+                <a href="#" onclick="switchView('dashboard')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link sidebar-active" data-target="dashboard">
+                    <i class="fa-solid fa-grip w-5 text-center"></i> 仪表盘
+                </a>
+                <a href="#" onclick="switchView('images')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link" data-target="images">
+                    <i class="fa-regular fa-images w-5 text-center"></i> 图片库
+                </a>
+                <a href="#" onclick="switchView('ideas')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link" data-target="ideas">
+                    <i class="fa-regular fa-lightbulb w-5 text-center"></i> Ideas
+                </a>
+                <a href="#" onclick="switchView('knowledge')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link" data-target="knowledge">
+                    <i class="fa-solid fa-book-open w-5 text-center"></i> 知识库
+                </a>
+                <a href="#" onclick="switchView('stats')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link" data-target="stats">
+                    <i class="fa-solid fa-chart-pie w-5 text-center"></i> 数据分析
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-200/50">
+                <a href="#" onclick="switchView('profile')" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/60 transition-all sidebar-link" data-target="profile">
+                    <div class="avatar online">
+                        <div class="w-8 rounded-full border border-gray-200" id="nav-avatar">
+                            <img src="https://ui-avatars.com/api/?name=User&background=random" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-semibold" id="nav-username">加载中...</span>
+                        <span class="text-xs opacity-60">个人设置</span>
+                    </div>
+                </a>
+            </div>
+        </aside>
+
+        <!-- 主内容区域 -->
+        <main class="flex-1 flex flex-col h-screen overflow-hidden relative">
+            
+            <!-- 顶部导航 -->
+            <header class="h-16 glass-panel flex items-center justify-between px-6 z-10 md:bg-transparent md:glass-panel md:border-b-0 border-b border-white/40 m-0 md:m-2 rounded-none md:rounded-xl">
+                <div class="md:hidden">
+                    <button class="btn btn-square btn-ghost btn-sm" onclick="toggleMobileMenu()">
+                        <i class="fa-solid fa-bars text-lg"></i>
+                    </button>
+                </div>
+                
+                <div class="flex-1 md:ml-4">
+                    <h2 id="page-title" class="text-xl font-bold">仪表盘</h2>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <!-- 主题切换按钮 -->
+                    <button class="btn btn-circle btn-ghost btn-sm" onclick="toggleTheme()" title="切换主题">
+                        <i class="fa-solid fa-palette text-lg" id="theme-icon"></i>
+                    </button>
+
+                    <button class="btn btn-circle btn-ghost btn-sm">
+                        <div class="indicator">
+                            <i class="fa-regular fa-bell text-lg"></i>
+                            <span class="badge badge-xs badge-error indicator-item"></span>
+                        </div>
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="logout()">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 内容滚动区 -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-6 relative" id="content-area">
+                
+                <!-- 2.1 仪表盘视图 -->
+                <div id="dashboard-view" class="view-section space-y-6 animate-fade-in">
+                    <!-- 统计卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="card glass-panel shadow-sm hover:shadow-md transition-all">
+                            <div class="card-body p-5">
+                                <h3 class="opacity-70 text-sm font-medium">图片总数</h3>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-3xl font-bold" id="dash-img-count">0</span>
+                                    <div class="badge badge-primary badge-outline">+2 新增</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card glass-panel shadow-sm hover:shadow-md transition-all">
+                            <div class="card-body p-5">
+                                <h3 class="opacity-70 text-sm font-medium">Ideas 灵感</h3>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-3xl font-bold" id="dash-idea-count">0</span>
+                                    <div class="badge badge-secondary badge-outline">活跃</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card glass-panel shadow-sm hover:shadow-md transition-all">
+                            <div class="card-body p-5">
+                                <h3 class="opacity-70 text-sm font-medium">知识笔记</h3>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-3xl font-bold" id="dash-know-count">0</span>
+                                    <i class="fa-solid fa-book opacity-30 text-2xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg" id="ai-status-card">
+                            <div class="card-body p-5">
+                                <h3 class="text-white/80 text-sm font-medium">AI 状态</h3>
+                                <div class="flex justify-between items-end">
+                                    <span class="text-xl font-bold text-white">在线</span>
+                                    <div class="loading loading-ring loading-md text-white"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷操作 & 图表预览 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 card glass-panel shadow-sm">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm opacity-60 uppercase">近期活动</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>类型</th>
+                                                <th>名称/标题</th>
+                                                <th>时间</th>
+                                                <th>状态</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recent-activity-list">
+                                            <!-- JS 填充 -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card glass-panel shadow-sm">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm opacity-60 uppercase">快速操作</h3>
+                                <div class="grid grid-cols-2 gap-3 mt-2">
+                                    <button class="btn btn-outline btn-primary h-20 flex flex-col gap-1" onclick="switchView('images')">
+                                        <i class="fa-solid fa-cloud-arrow-up text-xl"></i>
+                                        <span>传图片</span>
+                                    </button>
+                                    <button class="btn btn-outline btn-secondary h-20 flex flex-col gap-1" onclick="switchView('ideas')">
+                                        <i class="fa-solid fa-pen-nib text-xl"></i>
+                                        <span>记想法</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2.2 图片管理视图 -->
+                <div id="images-view" class="view-section hidden-view space-y-6 animate-fade-in">
+                    <div class="card border-2 border-dashed border-gray-300 bg-white/30 hover:bg-white/50 transition-all cursor-pointer" id="drop-zone">
+                        <div class="card-body items-center text-center py-10">
+                            <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 mb-2"></i>
+                            <p class="font-medium">拖拽图片到此处 或 点击上传</p>
+                            <input type="file" id="img-upload-input" class="hidden" multiple accept="image/*">
+                            <div class="w-full max-w-xs mt-2 hidden" id="upload-progress-container">
+                                <progress class="progress progress-primary w-full" value="0" max="100" id="upload-progress"></progress>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-lg">图库列表</h3>
+                        <div class="join">
+                            <input class="input input-sm input-bordered join-item bg-white/60" placeholder="搜索标签..." oninput="filterImages(this.value)"/>
+                            <button class="btn btn-sm join-item">搜索</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="image-grid"></div>
+                </div>
+
+                <!-- 2.3 Ideas 管理视图 -->
+                <div id="ideas-view" class="view-section hidden-view space-y-6 animate-fade-in">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-lg">我的灵感</h3>
+                        <button class="btn btn-primary btn-sm rounded-lg" onclick="openIdeaModal()">
+                            <i class="fa-solid fa-plus"></i> 新建 Idea
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="ideas-grid"></div>
+                </div>
+
+                <!-- 2.4 知识库视图 -->
+                <div id="knowledge-view" class="view-section hidden-view space-y-6 animate-fade-in">
+                     <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-lg">知识沉淀</h3>
+                        <button class="btn btn-secondary btn-sm rounded-lg" onclick="openKnowledgeModal()">
+                            <i class="fa-solid fa-plus"></i> 新建知识
+                        </button>
+                    </div>
+                    <div class="flex gap-2 overflow-x-auto pb-2" id="knowledge-tags">
+                        <div class="badge badge-lg badge-primary">全部</div>
+                        <div class="badge badge-lg badge-outline">前端</div>
+                        <div class="badge badge-lg badge-outline">AI</div>
+                        <div class="badge badge-lg badge-outline">设计</div>
+                    </div>
+                    <div class="flex flex-col gap-3" id="knowledge-list"></div>
+                </div>
+
+                <!-- 2.5 数据分析视图 -->
+                <div id="stats-view" class="view-section hidden-view space-y-6 animate-fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card glass-panel shadow-sm p-4">
+                            <h3 class="font-bold mb-4">数据分布</h3>
+                            <div class="h-64 relative">
+                                <canvas id="distributionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card glass-panel shadow-sm p-4">
+                            <h3 class="font-bold mb-4">增长趋势</h3>
+                             <div class="h-64 relative">
+                                <canvas id="growthChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2.6 个人资料视图 -->
+                <div id="profile-view" class="view-section hidden-view animate-fade-in">
+                    <div class="card glass-panel max-w-2xl mx-auto shadow-md">
+                        <div class="card-body">
+                            <h3 class="card-title mb-4">个人资料完善</h3>
+                            <form onsubmit="saveProfile(event)" class="space-y-4">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="avatar placeholder">
+                                        <div class="bg-neutral-focus text-neutral-content rounded-full w-20 cursor-pointer hover:opacity-80 transition">
+                                            <span class="text-3xl">UI</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline">更换头像</button>
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold">昵称</span></label>
+                                    <input type="text" id="profile-name" class="input input-bordered bg-white/60" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold">职业</span></label>
+                                    <input type="text" id="profile-job" class="input input-bordered bg-white/60" />
+                                </div>
+                                <div class="form-control">
+                                    <label class="label"><span class="label-text font-bold">简介</span></label>
+                                    <textarea id="profile-bio" class="textarea textarea-bordered h-24 bg-white/60"></textarea>
+                                </div>
+                                <div class="card-actions justify-end mt-4">
+                                    <button type="submit" class="btn btn-primary text-white rounded-xl w-32">保存更改</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 模态框: 通用编辑器 -->
+    <dialog id="editor_modal" class="modal">
+        <div class="modal-box w-11/12 max-w-4xl glass-panel shadow-2xl p-0 overflow-hidden rounded-2xl">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-white/80">
+                <h3 class="font-bold text-lg" id="modal-title">新建内容</h3>
+                <form method="dialog">
+                    <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+                </form>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
+                <input type="text" id="editor-title" placeholder="输入标题..." class="input input-ghost text-2xl font-bold w-full focus:bg-transparent px-0 mb-4" />
+                <div class="flex gap-2 mb-4">
+                    <select class="select select-sm select-bordered bg-white/50" id="editor-category">
+                        <option disabled selected>选择分类</option>
+                        <option>前端开发</option>
+                        <option>AI 探索</option>
+                        <option>设计灵感</option>
+                        <option>生活随笔</option>
+                    </select>
+                    <input type="text" id="editor-tags" placeholder="标签 (用逗号分隔)" class="input input-sm input-bordered flex-1 bg-white/50" />
+                </div>
+                <textarea id="markdown-editor"></textarea>
+            </div>
+            <div class="p-4 border-t border-gray-200 bg-white/80 flex justify-end gap-2">
+                <button class="btn btn-ghost" onclick="document.getElementById('editor_modal').close()">取消</button>
+                <button class="btn btn-primary text-white" onclick="saveEditorContent()">保存内容</button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- JS 逻辑 -->
+    <script>
+        // --- 1. 数据存储与状态管理 ---
+        const AppState = {
+            user: JSON.parse(localStorage.getItem('user')) || null,
+            data: { images: [], ideas: [], knowledge: [] },
+            currentView: 'dashboard',
+            mde: null, 
+            charts: {}, 
+            theme: localStorage.getItem('theme') || 'light',
+            // 定义主题列表顺序
+            themeList: ['light', 'popart', 'cyberpunk', 'pixel']
+        };
+
+        // 模拟数据初始化
+        function initMockData() {
+            if (!localStorage.getItem('appData')) {
+                const mockData = {
+                    images: [
+                        { id: 1, url: 'https://picsum.photos/300/200?random=1', tags: ['风景', '自然'], date: '2023-10-01' },
+                        { id: 2, url: 'https://picsum.photos/300/200?random=2', tags: ['科技', 'AI'], date: '2023-10-05' },
+                        { id: 3, url: 'https://picsum.photos/300/200?random=3', tags: ['设计', 'UI'], date: '2023-10-12' },
+                    ],
+                    ideas: [
+                        { id: 1, title: 'AI 辅助编程助手', content: '创建一个VSCode插件...', date: '2023-11-01' },
+                        { id: 2, title: '智能家居控制中心 UI', content: '使用拟态设计风格...', date: '2023-11-03' },
+                    ],
+                    knowledge: [
+                        { id: 1, title: 'React Server Components', category: '前端开发', tags: ['React'], date: '2023-10-01' },
+                        { id: 2, title: 'Prompt Engineering', category: 'AI 探索', tags: ['LLM'], date: '2023-10-20' },
+                    ]
+                };
+                localStorage.setItem('appData', JSON.stringify(mockData));
+            }
+            AppState.data = JSON.parse(localStorage.getItem('appData'));
+        }
+
+        // --- 2. 核心功能与路由 ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMockData();
+            applyTheme(AppState.theme);
+
+            if (AppState.user) {
+                showMainLayout();
+            } else {
+                document.getElementById('auth-view').classList.remove('hidden');
+            }
+
+            AppState.mde = new SimpleMDE({ 
+                element: document.getElementById("markdown-editor"),
+                spellChecker: false,
+                status: false,
+            });
+        });
+
+        // 主题切换逻辑 (循环切换)
+        function toggleTheme() {
+            const currentIndex = AppState.themeList.indexOf(AppState.theme);
+            const nextIndex = (currentIndex + 1) % AppState.themeList.length;
+            const newTheme = AppState.themeList[nextIndex];
+            
+            applyTheme(newTheme);
+            
+            // 提示文案映射
+            const themeNames = {
+                'light': '简约白 (Apple)',
+                'popart': '波普艺术 (Pop Art)',
+                'cyberpunk': '赛博朋克 (Cyberpunk)',
+                'pixel': '动漫像素 (Pixel Art)'
+            };
+            showToast(`主题切换: ${themeNames[newTheme]}`, 'success');
+        }
+
+        function applyTheme(themeName) {
+            AppState.theme = themeName;
+            localStorage.setItem('theme', themeName);
+            document.documentElement.setAttribute('data-theme', themeName);
+            
+            // 针对特定主题的 UI 细节微调
+            const aiCard = document.getElementById('ai-status-card');
+            if(aiCard) {
+                // 重置所有特殊样式
+                aiCard.className = 'card shadow-lg text-white';
+                aiCard.style = '';
+
+                if (themeName === 'light') {
+                    aiCard.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600');
+                } else if (themeName === 'popart') {
+                    aiCard.style.backgroundColor = '#000000';
+                    aiCard.style.border = '3px solid black';
+                } else if (themeName === 'cyberpunk') {
+                    aiCard.style.backgroundColor = '#000000';
+                    aiCard.style.border = '1px solid #00ff9f';
+                    aiCard.style.boxShadow = '0 0 10px #00ff9f';
+                    aiCard.classList.add('text-primary');
+                } else if (themeName === 'pixel') {
+                    aiCard.style.backgroundColor = '#6a0dad';
+                    aiCard.style.border = '4px solid #2d2d2d';
+                }
+            }
+
+            // 刷新图表
+            if (AppState.currentView === 'stats') {
+                renderStats();
+            }
+        }
+
+        function switchView(viewName) {
+            AppState.currentView = viewName;
+            
+            document.querySelectorAll('.sidebar-link').forEach(el => {
+                if (el.dataset.target === viewName) {
+                    el.classList.add('sidebar-active');
+                } else {
+                    el.classList.remove('sidebar-active');
+                }
+            });
+
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden-view');
+            });
+
+            const target = document.getElementById(viewName + '-view');
+            target.classList.remove('hidden-view');
+            
+            const titles = {
+                'dashboard': '仪表盘', 'images': '图片管理', 'ideas': 'Ideas 灵感',
+                'knowledge': '知识库', 'stats': '数据分析', 'profile': '个人中心'
+            };
+            document.getElementById('page-title').innerText = titles[viewName];
+
+            if (viewName === 'dashboard') renderDashboard();
+            if (viewName === 'images') renderImages();
+            if (viewName === 'ideas') renderIdeas();
+            if (viewName === 'knowledge') renderKnowledge();
+            if (viewName === 'stats') renderStats();
+            if (viewName === 'profile') loadProfileData();
+        }
+
+        // --- 3. 认证逻辑 ---
+        let isLoginMode = true;
+        function toggleAuthMode(mode) {
+            isLoginMode = mode === 'login';
+            document.getElementById('tab-login').className = `tab transition-all ${isLoginMode ? 'tab-active' : ''}`;
+            document.getElementById('tab-register').className = `tab transition-all ${!isLoginMode ? 'tab-active' : ''}`;
+            const regFields = document.getElementById('register-fields');
+            const btnText = document.getElementById('auth-btn-text');
+            if (isLoginMode) {
+                regFields.classList.add('hidden');
+                btnText.innerText = '进入系统';
+            } else {
+                regFields.classList.remove('hidden');
+                btnText.innerText = '立即注册';
+            }
+        }
+        function togglePassword() {
+            const input = document.getElementById('password-input');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+        async function handleAuth(e) {
+            e.preventDefault();
+            const btn = document.querySelector('#auth-form button[type="submit"]');
+            const loader = document.getElementById('auth-loading');
+            const text = document.getElementById('auth-btn-text');
+            btn.disabled = true; text.classList.add('hidden'); loader.classList.remove('hidden');
+            await new Promise(r => setTimeout(r, 1000));
+            const user = { name: 'Designer', email: 'user@example.com', avatar: 'https://ui-avatars.com/api/?name=Designer&background=0D8ABC&color=fff' };
+            localStorage.setItem('user', JSON.stringify(user));
+            AppState.user = user;
+            showToast('登录成功！欢迎回来', 'success');
+            showMainLayout();
+        }
+        function showMainLayout() {
+            document.getElementById('auth-view').classList.add('hidden'); 
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('main-layout').classList.remove('hidden-view');
+            document.getElementById('nav-username').innerText = AppState.user.name;
+            document.getElementById('nav-avatar').innerHTML = `<img src="${AppState.user.avatar}" />`;
+            applyTheme(AppState.theme);
+            switchView('dashboard');
+        }
+        function logout() { localStorage.removeItem('user'); location.reload(); }
+
+        // --- 4. 业务逻辑渲染 ---
+
+        function renderDashboard() {
+            document.getElementById('dash-img-count').innerText = AppState.data.images.length;
+            document.getElementById('dash-idea-count').innerText = AppState.data.ideas.length;
+            document.getElementById('dash-know-count').innerText = AppState.data.knowledge.length;
+            const list = document.getElementById('recent-activity-list');
+            list.innerHTML = '';
+            const recent = [
+                ...AppState.data.ideas.map(i => ({type: 'Idea', title: i.title, date: i.date})),
+                ...AppState.data.images.map(i => ({type: 'Image', title: '上传图片', date: i.date}))
+            ].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            recent.forEach(item => {
+                const tr = document.createElement('tr');
+                let badgeClass = item.type === 'Idea' ? 'badge-secondary' : 'badge-primary';
+                tr.innerHTML = `
+                    <td><div class="badge ${badgeClass} badge-outline badge-xs">${item.type}</div></td>
+                    <td class="font-medium">${item.title}</td>
+                    <td class="text-xs opacity-70">${item.date}</td>
+                    <td><span class="text-xs text-success">Completed</span></td>
+                `;
+                list.appendChild(tr);
+            });
+        }
+
+        function renderImages() {
+            const grid = document.getElementById('image-grid');
+            grid.innerHTML = '';
+            AppState.data.images.forEach(img => {
+                const div = document.createElement('div');
+                div.className = 'card bg-base-100 shadow-sm hover:shadow-lg transition-all duration-300 group';
+                div.innerHTML = `
+                    <figure class="px-3 pt-3 relative overflow-hidden h-40">
+                        <img src="${img.url}" class="rounded-xl object-cover w-full h-full transform group-hover:scale-110 transition-transform duration-500" style="border-radius: inherit" />
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                             <button class="btn btn-sm btn-circle btn-ghost text-white"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </figure>
+                    <div class="card-body p-3 items-center text-center">
+                        <div class="flex gap-1 flex-wrap justify-center">
+                            ${img.tags.map(t => `<span class="badge badge-xs badge-outline">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('img-upload-input');
+            dropZone.onclick = () => fileInput.click();
+            fileInput.onchange = (e) => handleFileUpload(e.target.files);
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('bg-blue-50'); };
+            dropZone.ondragleave = (e) => { e.preventDefault(); dropZone.classList.remove('bg-blue-50'); };
+            dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('bg-blue-50'); handleFileUpload(e.dataTransfer.files); };
+        }
+        async function handleFileUpload(files) {
+            if(files.length === 0) return;
+            document.getElementById('upload-progress-container').classList.remove('hidden');
+            const progressBar = document.getElementById('upload-progress');
+            for(let i=0; i<=100; i+=20) { progressBar.value = i; await new Promise(r => setTimeout(r, 50)); }
+            const newImg = { id: Date.now(), url: `https://picsum.photos/300/200?random=${Date.now()}`, tags: ['新上传'], date: new Date().toISOString().split('T')[0] };
+            AppState.data.images.unshift(newImg);
+            localStorage.setItem('appData', JSON.stringify(AppState.data));
+            document.getElementById('upload-progress-container').classList.add('hidden');
+            showToast('图片上传成功', 'success');
+            renderImages();
+        }
+
+        function renderIdeas() {
+            const grid = document.getElementById('ideas-grid');
+            grid.innerHTML = '';
+            AppState.data.ideas.forEach(idea => {
+                const div = document.createElement('div');
+                div.className = 'card bg-base-100 shadow-sm border border-white/20 hover:shadow-md transition-all';
+                div.innerHTML = `
+                    <div class="card-body p-5">
+                        <h3 class="card-title text-base">${idea.title}</h3>
+                        <p class="text-sm opacity-70 line-clamp-3">${idea.content}</p>
+                        <div class="card-actions justify-between items-center mt-4">
+                            <span class="text-xs opacity-50">${idea.date}</span>
+                            <button class="btn btn-ghost btn-xs text-error" onclick="deleteItem('ideas', ${idea.id})">删除</button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function renderKnowledge() {
+            const list = document.getElementById('knowledge-list');
+            list.innerHTML = '';
+            AppState.data.knowledge.forEach(k => {
+                const div = document.createElement('div');
+                div.className = 'card card-side bg-base-100 shadow-sm border border-white/20 p-2 items-center hover:bg-base-200 transition';
+                let iconStyle = '';
+                if(AppState.theme === 'popart') iconStyle = 'border: 2px solid black; border-radius: 0;';
+                if(AppState.theme === 'cyberpunk') iconStyle = 'border: 1px solid #00ff9f; box-shadow: 0 0 5px #00ff9f;';
+                if(AppState.theme === 'pixel') iconStyle = 'border: 2px solid #2d2d2d; border-radius: 0;';
+
+                div.innerHTML = `
+                    <div class="w-16 h-16 bg-blue-50/10 rounded-lg flex items-center justify-center text-primary ml-2" style="${iconStyle}">
+                         <i class="fa-solid fa-file-lines text-xl"></i>
+                    </div>
+                    <div class="card-body p-4">
+                        <h3 class="card-title text-base">${k.title}</h3>
+                        <div class="flex gap-2">
+                             <span class="badge badge-sm badge-ghost">${k.category}</span>
+                             ${k.tags.map(t => `<span class="badge badge-sm badge-outline text-xs">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                     <div class="pr-4">
+                        <button class="btn btn-square btn-sm btn-ghost" onclick="deleteItem('knowledge', ${k.id})"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        // 渲染 Charts (多主题适配)
+        function renderStats() {
+            if(AppState.charts.dist) AppState.charts.dist.destroy();
+            if(AppState.charts.growth) AppState.charts.growth.destroy();
+
+            // 主题颜色映射
+            let colors, fontColor, fontFamily, borderColor, borderWidth;
+
+            switch(AppState.theme) {
+                case 'popart':
+                    colors = ['#FFD700', '#FF3333', '#3366FF'];
+                    fontColor = '#000000';
+                    fontFamily = "'Bangers', cursive";
+                    borderColor = '#000000';
+                    borderWidth = 3;
+                    break;
+                case 'cyberpunk':
+                    colors = ['#00ff9f', '#ff003c', '#fcee0a'];
+                    fontColor = '#00ff9f';
+                    fontFamily = "'Orbitron', sans-serif";
+                    borderColor = '#000000';
+                    borderWidth = 1;
+                    break;
+                case 'pixel':
+                    colors = ['#6a0dad', '#ff8c00', '#00ced1'];
+                    fontColor = '#2d2d2d';
+                    fontFamily = "'DotGothic16', sans-serif";
+                    borderColor = '#2d2d2d';
+                    borderWidth = 2;
+                    break;
+                default: // Light
+                    colors = ['#3b82f6', '#ec4899', '#10b981'];
+                    fontColor = '#666666';
+                    fontFamily = "'Inter', sans-serif";
+                    borderColor = '#ffffff';
+                    borderWidth = 2;
+            }
+
+            Chart.defaults.color = fontColor;
+            Chart.defaults.font.family = fontFamily;
+
+            const ctx1 = document.getElementById('distributionChart').getContext('2d');
+            AppState.charts.dist = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Images', 'Ideas', 'Knowledge'],
+                    datasets: [{
+                        data: [AppState.data.images.length, AppState.data.ideas.length, AppState.data.knowledge.length],
+                        backgroundColor: colors,
+                        borderColor: borderColor,
+                        borderWidth: borderWidth
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctx2 = document.getElementById('growthChart').getContext('2d');
+            AppState.charts.growth = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [{
+                        label: '数据增长量',
+                        data: [12, 19, 3, 5, 2, 3],
+                        borderColor: colors[1],
+                        borderWidth: borderWidth === 0 ? 2 : borderWidth,
+                        tension: AppState.theme === 'light' ? 0.4 : 0, // 只有 Apple 风格用曲线，其他硬朗
+                        fill: true,
+                        backgroundColor: AppState.theme === 'cyberpunk' ? 'rgba(255, 0, 60, 0.2)' : 'rgba(0, 122, 255, 0.1)',
+                        pointBackgroundColor: AppState.theme === 'cyberpunk' ? '#000' : colors[1],
+                        pointBorderColor: AppState.theme === 'cyberpunk' ? colors[1] : '#fff',
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { color: AppState.theme === 'cyberpunk' ? '#333' : '#e5e7eb' } },
+                        y: { grid: { color: AppState.theme === 'cyberpunk' ? '#333' : '#e5e7eb' } }
+                    }
+                }
+            });
+        }
+
+        // --- 5. 通用操作 ---
+        function openIdeaModal() {
+            document.getElementById('modal-title').innerText = '新建 Idea';
+            document.getElementById('editor-category').parentElement.classList.add('hidden');
+            resetEditor(); document.getElementById('editor_modal').showModal();
+        }
+        function openKnowledgeModal() {
+            document.getElementById('modal-title').innerText = '新建知识';
+            document.getElementById('editor-category').parentElement.classList.remove('hidden');
+            resetEditor(); document.getElementById('editor_modal').showModal();
+        }
+        function resetEditor() { document.getElementById('editor-title').value = ''; document.getElementById('editor-tags').value = ''; AppState.mde.value(''); }
+        function saveEditorContent() {
+            const title = document.getElementById('editor-title').value;
+            const content = AppState.mde.value();
+            const tags = document.getElementById('editor-tags').value.split(',').filter(t=>t);
+            const category = document.getElementById('editor-category').value;
+            if(!title) { showToast('请输入标题', 'error'); return; }
+            const newItem = { id: Date.now(), title, content, tags, date: new Date().toISOString().split('T')[0] };
+            if (document.getElementById('editor-category').parentElement.classList.contains('hidden')) {
+                AppState.data.ideas.unshift(newItem); showToast('Idea 保存成功', 'success'); renderIdeas();
+            } else {
+                newItem.category = category === '选择分类' ? '未分类' : category;
+                AppState.data.knowledge.unshift(newItem); showToast('知识保存成功', 'success'); renderKnowledge();
+            }
+            localStorage.setItem('appData', JSON.stringify(AppState.data));
+            document.getElementById('editor_modal').close();
+        }
+        function deleteItem(type, id) {
+            if(!confirm('确定删除吗？')) return;
+            AppState.data[type] = AppState.data[type].filter(i => i.id !== id);
+            localStorage.setItem('appData', JSON.stringify(AppState.data));
+            if(type === 'ideas') renderIdeas(); if(type === 'knowledge') renderKnowledge();
+            showToast('已删除', 'info');
+        }
+        async function saveProfile(e) {
+            e.preventDefault();
+            const btn = e.target.querySelector('button'); const old = btn.innerText;
+            btn.innerHTML = '<span class="loading loading-spinner"></span>';
+            await new Promise(r => setTimeout(r, 1000));
+            AppState.user.name = document.getElementById('profile-name').value || AppState.user.name;
+            localStorage.setItem('user', JSON.stringify(AppState.user));
+            document.getElementById('nav-username').innerText = AppState.user.name;
+            btn.innerText = old; showToast('个人资料已更新', 'success');
+        }
+        function loadProfileData() {
+            document.getElementById('profile-name').value = AppState.user.name || '';
+            document.getElementById('profile-job').value = 'AI 架构师';
+            document.getElementById('profile-bio').value = '致力于构建第二大脑...';
+        }
+
+        // --- 工具函数 ---
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let alertClass = 'alert-info';
+            if(type === 'success') alertClass = 'alert-success text-white';
+            if(type === 'error') alertClass = 'alert-error text-white';
+            
+            // 样式微调
+            if(AppState.theme === 'popart') alertClass += ' border-2 border-black rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold';
+            if(AppState.theme === 'cyberpunk') alertClass = 'alert bg-black border border-[#00ff9f] text-[#00ff9f] shadow-[0_0_10px_#00ff9f]';
+            if(AppState.theme === 'pixel') alertClass += ' border-4 border-[#2d2d2d] rounded-none';
+
+            toast.className = `alert ${alertClass} shadow-lg mb-2 animate-fade-in`;
+            toast.innerHTML = `<span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function toggleMobileMenu() {
+            const aside = document.querySelector('aside');
+            aside.classList.toggle('hidden');
+            aside.classList.toggle('absolute');
+            aside.classList.toggle('h-full');
+            aside.classList.toggle('z-50');
+            aside.classList.toggle('bg-white'); // 如果是 cyberpunk，css 会覆盖这个颜色
+        }
+    </script>
+</body>
+</html>
