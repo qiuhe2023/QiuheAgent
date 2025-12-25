@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人数据管理后台 | Personal Data Center</title>
+    
+    <!-- 引入 Tailwind CSS 和 DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 引入 Chart.js 用于图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- 引入 Three.js 用于3D粒子效果 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- 配置 Tailwind 主题颜色 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#9d00ff",    // 紫色
+                        secondary: "#00f0ff",  // 电光蓝
+                        accent: "#00ff9d",     // 荧光绿
+                        neutral: "#12141d",    // 深灰黑
+                        "base-100": "#0f111a", // 基础背景
+                        error: "#ff2e99",      // 浅红
+                    }
+                }
+            },
+            daisyui: {
+                themes: [
+                    {
+                        mytheme: {
+                            "primary": "#9d00ff",
+                            "secondary": "#00f0ff",
+                            "accent": "#00ff9d",
+                            "neutral": "#12141d",
+                            "base-100": "#0f111a",
+                            "info": "#3abff8",
+                            "success": "#36d399",
+                            "warning": "#fbbd23",
+                            "error": "#ff2e99",
+                        },
+                    },
+                ],
+            },
+        }
+    </script>
+
+    <style>
+        /* 自定义滚动条样式，适配科技风 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f111a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9d00ff; 
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Three.js 容器样式 */
+        #three-container canvas {
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+        /* 星空Canvas样式 */
+        #stars-canvas {
+            display: block;
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="bg-base-100 text-base-content font-sans antialiased min-h-screen flex flex-col">
+
+    <section id="login-section" class="flex-grow flex items-center justify-center relative overflow-hidden">
+        <!-- 动态星空背景 -->
+        <canvas id="stars-canvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+        <!-- 左上角0和1粒子球体 -->
+        <canvas id="sphere-canvas" class="absolute top-8 left-8 w-48 h-48 z-10 rounded-full overflow-hidden"></canvas>
+        <!-- 遮罩层 -->
+        <div class="absolute inset-0 bg-base-100/20 z-10"></div>
+        
+        <div class="card w-96 bg-neutral shadow-2xl border border-primary/20 z-10 fade-in">
+            <div class="card-body items-center text-center">
+                <div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-cube text-3xl text-white"></i>
+                </div>
+                <h2 class="card-title text-2xl font-bold text-white mb-1">Super Agent</h2>
+                <p class="text-gray-400 text-sm mb-6">个人数据超级平台</p>
+                
+                <form id="login-form" class="w-full space-y-4" onsubmit="handleLogin(event)">
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text text-gray-300">账号</span>
+                        </label>
+                        <input type="text" id="username" placeholder="admin" class="input input-bordered w-full bg-base-100 focus:border-secondary focus:outline-none" />
+                    </div>
+                    <div class="form-control w-full">
+                        <label class="label">
+                            <span class="label-text text-gray-300">密码</span>
+                        </label>
+                        <input type="password" id="password" placeholder="******" class="input input-bordered w-full bg-base-100 focus:border-secondary focus:outline-none" />
+                    </div>
+                    <div id="login-error" class="text-error text-xs text-left hidden"><i class="fa-solid fa-circle-exclamation mr-1 text-white"></i> 账号或密码不能为空</div>
+                    <div class="card-actions justify-end mt-4">
+                        <button type="submit" class="btn w-full text-white bg-neutral border border-primary/30 hover:bg-primary/20 transition-all duration-300">
+                            登 录 <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section id="dashboard-section" class="hidden h-screen flex overflow-hidden">
+        
+        <!-- 侧边导航栏 -->
+        <aside class="w-64 bg-neutral border-r border-white/5 flex-shrink-0 hidden md:flex flex-col">
+            <div class="p-6 flex items-center gap-3 border-b border-white/5">
+                <i class="fa-solid fa-cube text-2xl text-primary"></i>
+                <span class="text-xl font-bold tracking-wider text-white">NEXUS</span>
+            </div>
+            
+            <ul class="menu p-4 w-full gap-2 text-base-content">
+                <li>
+                    <a onclick="switchTab('dashboard')" id="nav-dashboard" class="active hover:text-white">
+                        <i class="fa-solid fa-chart-pie w-5"></i> 仪表盘
+                    </a>
+                </li>
+                <li class="menu-title text-gray-500 mt-4">资源管理</li>
+                <li>
+                    <a onclick="switchTab('images')" id="nav-images" class="hover:text-white">
+                        <i class="fa-solid fa-images w-5"></i> 图片库
+                    </a>
+                </li>
+                <li>
+                    <a onclick="switchTab('ideas')" id="nav-ideas" class="hover:text-white">
+                        <i class="fa-solid fa-lightbulb w-5"></i> Ideas 灵感
+                    </a>
+                </li>
+                <li class="menu-title text-gray-500 mt-4">数据中心</li>
+                <li>
+                    <a onclick="switchTab('database')" id="nav-database" class="hover:text-white">
+                        <i class="fa-solid fa-database w-5"></i> 数据库展示
+                    </a>
+                </li>
+            </ul>
+
+            <div class="mt-auto p-4 border-t border-white/5">
+                <div class="flex items-center gap-3 p-2 rounded-lg bg-base-100/50">
+                    <div class="avatar online">
+                        <div class="w-10 rounded-full">
+                            <img src="https://ui-avatars.com/api/?name=Admin&background=9d00ff&color=fff" />
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-white truncate">Administrator</p>
+                        <p class="text-xs text-gray-400 truncate">Online</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <div class="flex-1 flex flex-col min-w-0 bg-base-100">
+            
+            <!-- 顶部状态栏 -->
+            <header class="h-16 bg-neutral/50 backdrop-blur border-b border-white/5 flex items-center justify-between px-6 sticky top-0 z-20">
+                <div class="flex items-center gap-4">
+                    <!-- 移动端菜单按钮 -->
+                    <button class="btn btn-square btn-ghost md:hidden text-white">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h1 id="page-title" class="text-lg font-bold text-white hidden md:block">仪表盘</h1>
+                </div>
+
+                <div class="flex-1 max-w-md mx-4 hidden md:block">
+                    <div class="relative">
+                        <input type="text" placeholder="全局搜索..." class="input input-sm input-bordered w-full bg-base-100 focus:border-secondary rounded-full pl-10" />
+                        <i class="fa-solid fa-search absolute left-3 top-2 text-white"></i>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button class="btn btn-ghost btn-circle btn-sm text-white hover:text-secondary">
+                        <div class="indicator">
+                            <i class="fa-solid fa-bell text-lg"></i>
+                            <span class="badge badge-xs badge-primary indicator-item"></span>
+                        </div>
+                    </button>
+                    <button onclick="handleLogout()" class="btn btn-ghost btn-sm text-white hover:bg-error/10 hover:text-error">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span class="hidden md:inline">退出</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- 内容滚动容器 -->
+            <main class="flex-1 overflow-y-auto p-6 relative">
+                
+                <!-- 1. 仪表盘视图 -->
+                <div id="view-dashboard" class="space-y-6 fade-in">
+                    <!-- 统计卡片 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="card bg-neutral border border-white/5 shadow-xl">
+                            <div class="card-body flex-row items-center gap-4">
+                                <div class="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                                    <i class="fa-solid fa-image text-2xl text-white"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value text-white text-2xl" id="stat-img-count">0</div>
+                                    <div class="stat-desc text-gray-400">图片总数</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-neutral border border-white/5 shadow-xl">
+                            <div class="card-body flex-row items-center gap-4">
+                                <div class="w-12 h-12 rounded-lg bg-secondary/20 flex items-center justify-center">
+                                    <i class="fa-solid fa-lightbulb text-2xl text-white"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value text-white text-2xl" id="stat-idea-count">0</div>
+                                    <div class="stat-desc text-gray-400">灵感总数</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-neutral border border-white/5 shadow-xl">
+                            <div class="card-body flex-row items-center gap-4">
+                                <div class="w-12 h-12 rounded-lg bg-accent/20 flex items-center justify-center">
+                                    <i class="fa-solid fa-database text-2xl text-white"></i>
+                                </div>
+                                <div>
+                                    <div class="stat-value text-white text-2xl" id="stat-db-count">0</div>
+                                    <div class="stat-desc text-gray-400">数据库记录</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 图表区域 -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="card bg-neutral border border-white/5 shadow-xl">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm text-gray-400 mb-4">数据分布概览</h3>
+                                <div class="h-64">
+                                    <canvas id="chart-bar"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-neutral border border-white/5 shadow-xl">
+                            <div class="card-body">
+                                <h3 class="card-title text-sm text-gray-400 mb-4">存储类型占比</h3>
+                                <div class="h-64 flex justify-center">
+                                    <canvas id="chart-doughnut"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快捷入口 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <button onclick="switchTab('images')" class="btn btn-outline btn-primary h-auto py-4 border-dashed border-2 hover:bg-primary/10">
+                            <div class="flex flex-col items-center gap-2">
+                                <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                                <span>快速上传图片</span>
+                            </div>
+                        </button>
+                        <button onclick="switchTab('ideas')" class="btn btn-outline btn-secondary h-auto py-4 border-dashed border-2 hover:bg-secondary/10">
+                            <div class="flex flex-col items-center gap-2">
+                                <i class="fa-solid fa-pen-to-square text-2xl"></i>
+                                <span>记录新 Idea</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. 图片管理视图 -->
+                <div id="view-images" class="hidden space-y-6 fade-in">
+                    <div class="flex justify-between items-center bg-neutral p-4 rounded-xl border border-white/5 cursor-pointer">
+                        <h2 class="text-xl font-bold text-white">图片库</h2>
+                        <div>
+                            <input type="file" id="img-upload-input" multiple accept="image/*" class="hidden" onchange="handleImageUpload(this)">
+                            <label for="img-upload-input" class="btn btn-primary btn-sm text-white">
+                                <i class="fa-solid fa-plus"></i> 上传图片
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="image-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <!-- 图片卡片将通过 JS 插入这里 -->
+                    </div>
+                    <div id="image-empty" class="text-center py-20 text-gray-500 hidden">
+                        <i class="fa-regular fa-image text-4xl mb-2"></i>
+                        <p>暂无图片，点击右上角上传</p>
+                    </div>
+                </div>
+
+                <!-- 3. Ideas 管理视图 -->
+                <div id="view-ideas" class="hidden space-y-6 fade-in">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- 输入表单 -->
+                        <div class="lg:col-span-1">
+                            <div class="card bg-neutral border border-white/5 sticky top-6">
+                                <div class="card-body">
+                                    <h3 class="card-title text-white mb-4">新建 Idea</h3>
+                                    <div class="form-control w-full">
+                                        <label class="label"><span class="label-text">标题</span></label>
+                                        <input type="text" id="idea-title" class="input input-bordered bg-base-100" placeholder="灵感关键词..." />
+                                    </div>
+                                    <div class="form-control w-full mt-2">
+                                        <label class="label"><span class="label-text">内容详情</span></label>
+                                        <textarea id="idea-content" class="textarea textarea-bordered bg-base-100 h-32" placeholder="详细描述你的想法..."></textarea>
+                                    </div>
+                                    <button onclick="addIdea()" class="btn btn-secondary w-full mt-6 text-white">
+                                        <i class="fa-solid fa-paper-plane"></i> 提交保存
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 列表展示 -->
+                        <div class="lg:col-span-2 space-y-4" id="idea-list">
+                            <!-- Idea 卡片将通过 JS 插入这里 -->
+                        </div>
+                        <div id="idea-empty" class="lg:col-span-2 text-center py-20 text-gray-500 hidden">
+                            <i class="fa-regular fa-lightbulb text-4xl mb-2"></i>
+                            <p>暂无灵感记录，快去左侧添加吧</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 数据库展示视图 (新增 Three.js 容器) -->
+                <div id="view-database" class="hidden space-y-6 fade-in">
+                    
+                    <!-- Three.js 3D 粒子容器) -->
+                    <div id="three-container" class="w-full h-80 bg-neutral rounded-xl border border-white/5 relative overflow-hidden shadow-lg">
+                        <div class="absolute top-4 left-4 z-10 pointer-events-none">
+                            <h3 class="text-white font-bold text-lg"><i class="fa-solid fa-circle-nodes mr-2 text-secondary"></i>数据节点拓扑</h3>
+                            <p class="text-xs text-gray-400">实时全息视图 / Live Topology</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-neutral rounded-xl border border-white/5 overflow-hidden">
+                        <div class="p-4 border-b border-white/5 flex flex-wrap gap-4 justify-between items-center">
+                            <h2 class="text-xl font-bold text-white">核心数据库</h2>
+                            <select id="db-filter" class="select select-bordered select-sm bg-base-100 max-w-xs" onchange="renderDatabase(1)">
+                                <option value="all">全部类型</option>
+                                <option value="用户数据">用户数据</option>
+                                <option value="系统日志">系统日志</option>
+                                <option value="交易记录">交易记录</option>
+                            </select>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="table table-zebra">
+                                <!-- head -->
+                                <thead class="bg-base-100 text-gray-400">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>名称</th>
+                                        <th>类型</th>
+                                        <th>状态</th>
+                                        <th>创建时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db-table-body">
+                                    <!-- 表格行 JS 生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分页 -->
+                        <div class="p-4 border-t border-white/5 flex justify-end">
+                            <div class="join">
+                                <button class="join-item btn btn-sm" onclick="changePage(-1)">«</button>
+                                <button class="join-item btn btn-sm btn-active pointer-events-none" id="page-num">Page 1</button>
+                                <button class="join-item btn btn-sm" onclick="changePage(1)">»</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </section>
+
+    
+    <!-- 图片查看大图弹窗 -->
+    <dialog id="modal_image_view" class="modal backdrop-blur-sm">
+        <div class="modal-box max-w-4xl bg-transparent shadow-none p-0 relative text-center">
+            <form method="dialog">
+                <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-white bg-black/50 hover:bg-black/70">✕</button>
+            </form>
+            <img id="modal-img-src" src="" class="max-h-[80vh] rounded-lg shadow-2xl inline-block" alt="Preview">
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
+
+    <!-- Idea 编辑弹窗 -->
+    <dialog id="modal_idea_edit" class="modal">
+        <div class="modal-box bg-neutral border border-white/10">
+            <h3 class="font-bold text-lg text-white mb-4">编辑 Idea</h3>
+            <input type="hidden" id="edit-idea-id">
+            <div class="form-control w-full">
+                <label class="label"><span class="label-text">标题</span></label>
+                <input type="text" id="edit-idea-title" class="input input-bordered bg-base-100" />
+            </div>
+            <div class="form-control w-full mt-2">
+                <label class="label"><span class="label-text">内容</span></label>
+                <textarea id="edit-idea-content" class="textarea textarea-bordered bg-base-100 h-32"></textarea>
+            </div>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn btn-ghost">取消</button>
+                    <button class="btn btn-primary text-white" onclick="saveIdeaEdit(event)">保存修改</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+
+    <script>
+        // --- Three.js 星空效果 --- 
+        // 初始化Three.js星空背景
+        function initThreeStarfield() {
+            const canvas = document.getElementById('stars-canvas');
+            if (!canvas) return;
+        
+            // 1. 场景
+            const scene = new THREE.Scene();
+        
+            // 2. 相机
+            const camera = new THREE.PerspectiveCamera(
+                75, 
+                canvas.clientWidth / canvas.clientHeight, 
+                0.1, 
+                1000
+            );
+            camera.position.z = 50;
+        
+            // 3. 渲染器
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x0c0e1a, 1);
+        
+            // 创建数字纹理（全部白色，使用圆润字体）
+            const color = '#ffffff';
+            // 使用圆润字体：Arial Rounded MT Bold, Verdana, Helvetica等
+            function createTextTexture(text, size = 64) {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const context = canvas.getContext('2d');
+                
+                // 设置背景透明
+                context.clearRect(0, 0, size, size);
+                
+                // 设置文本样式 - 无衬线字体
+                context.fillStyle = color;
+                context.font = `${size * 0.8}px "Roboto", "Helvetica", "Arial", sans-serif`;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                
+                // 绘制文本
+                context.fillText(text, size / 2, size / 2);
+                
+                // 创建纹理
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
+            }
+        
+            const texture0 = createTextTexture('0', 64);
+            const texture1 = createTextTexture('1', 64);
+        
+            // 4. 创建0和1粒子
+            const particleCount = 2000; // 增加粒子数量到2000个
+            const particles = new THREE.Group();
+            
+            // 左上角粒子球的位置（相对于登录区域）
+            // 需要转换为Three.js坐标系中的位置
+            const spherePosition = new THREE.Vector3(-90, 90, 0); // 估算的左上角粒子球在Three.js坐标系中的位置
+
+            for (let i = 0; i < particleCount; i++) {
+                // 随机选择0或1
+                const isZero = Math.random() > 0.5;
+                
+                // 选择纹理
+                const texture = isZero ? texture0 : texture1;
+                
+                // 创建精灵材质
+                const material = new THREE.SpriteMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0, // 初始透明度为0，在涌现过程中逐渐显示
+                    blending: THREE.AdditiveBlending
+                });
+                
+                // 创建精灵
+                const sprite = new THREE.Sprite(material);
+                
+                // 初始位置：设置为粒子球的位置
+                sprite.position.copy(spherePosition);
+                
+                // 随机大小 - 调整为更合适的尺寸
+                const size = Math.random() * 1 + 0.5; // 大小范围：1-2.5
+                sprite.scale.set(size, size, size);
+                
+                // 随机旋转速度
+                sprite.userData.rotationSpeed = (Math.random() - 0.5) * 0.02;
+                
+                // 浮现相关的用户数据
+                sprite.userData = {
+                    ...sprite.userData,
+                    // 目标位置（最终的随机位置）
+                    targetPosition: new THREE.Vector3(
+                        (Math.random() - 0.5) * 200,
+                        (Math.random() - 0.5) * 200,
+                        (Math.random() - 0.5) * 200
+                    ),
+                    // 浮现开始时间（使用随机延迟，避免所有粒子同时开始浮现）
+                    emergenceStartTime: Date.now() + Math.random() * 1000,
+                    // 浮现持续时间
+                    emergenceDuration: 2000 + Math.random() * 2000, // 2-4秒
+                    // 浮现完成标志
+                    emergenceCompleted: false,
+                    // 初始透明度
+                    initialOpacity: 0.8
+                };
+                
+                // 添加到粒子组
+                particles.add(sprite);
+            }
+        
+            // 添加粒子组到场景
+            scene.add(particles);
+        
+            // 7. 添加旋转和动画效果
+            function animate() {
+                requestAnimationFrame(animate);
+                const now = Date.now();
+
+                // 粒子组缓慢旋转
+                particles.rotation.x += 0.0002;
+                particles.rotation.y += 0.0005;
+
+                // 每个粒子独立旋转和闪烁
+                particles.children.forEach((sprite, index) => {
+                    // 粒子自身旋转
+                    sprite.rotation.z += sprite.userData.rotationSpeed;
+                    
+                    // 检查是否需要进行浮现动画
+                    if (!sprite.userData.emergenceCompleted) {
+                        // 检查是否达到浮现开始时间
+                        if (now >= sprite.userData.emergenceStartTime) {
+                            // 计算浮现进度（0-1）
+                            const elapsed = now - sprite.userData.emergenceStartTime;
+                            const progress = Math.min(elapsed / sprite.userData.emergenceDuration, 1);
+                            
+                            // 使用缓动函数使动画更自然
+                            const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+                            
+                            // 更新粒子位置（从球体位置到目标位置的插值）
+                            sprite.position.lerpVectors(
+                                spherePosition,
+                                sprite.userData.targetPosition,
+                                easeProgress
+                            );
+                            
+                            // 更新透明度（从0逐渐增加到目标透明度）
+                            sprite.material.opacity = sprite.userData.initialOpacity * easeProgress;
+                            
+                            // 检查是否浮现完成
+                            if (progress >= 1) {
+                                sprite.userData.emergenceCompleted = true;
+                            }
+                        }
+                    } else {
+                        // 浮现完成后，应用正常的闪烁效果
+                        const flicker = 0.6 + Math.sin(now * 0.001 + index) * 0.2;
+                        sprite.material.opacity = sprite.userData.initialOpacity * flicker;
+                    }
+                });
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // 8. 响应窗口大小变化
+            window.addEventListener('resize', () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+        }
+
+
+
+        // --- 左上角0和1粒子球体效果 --- 
+        function initSphereParticles() {
+            const canvas = document.getElementById('sphere-canvas');
+            if (!canvas) return;
+        
+            // 1. 场景
+            const scene = new THREE.Scene();
+        
+            // 2. 相机
+            const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            camera.position.z = 10;
+        
+            // 3. 渲染器
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x000000, 0);
+        
+            // 使用与背景相同的0和1纹理
+            const color = '#ffffff';
+            function createTextTexture(text, size = 32) {
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const context = canvas.getContext('2d');
+                
+                context.clearRect(0, 0, size, size);
+                context.fillStyle = color;
+                context.font = `${size * 0.8}px "Roboto", "Helvetica", "Arial", sans-serif`;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText(text, size / 2, size / 2);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.needsUpdate = true;
+                return texture;
+            }
+        
+            const texture0 = createTextTexture('0', 32);
+            const texture1 = createTextTexture('1', 32);
+        
+            // 4. 创建球体粒子
+            const particleCount = 500;
+            const particles = new THREE.Group();
+        
+            // 球体半径和位置参数
+            const sphereRadius = 5;
+        
+            for (let i = 0; i < particleCount; i++) {
+                // 随机选择0或1
+                const isZero = Math.random() > 0.5;
+                const texture = isZero ? texture0 : texture1;
+        
+                // 创建精灵材质
+                const material = new THREE.SpriteMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0.9,
+                    blending: THREE.AdditiveBlending
+                });
+        
+                // 创建精灵
+                const sprite = new THREE.Sprite(material);
+        
+                // 在球面上均匀分布粒子
+                const theta = Math.random() * Math.PI * 2; // 方位角
+                const phi = Math.acos(Math.random() * 2 - 1); // 极角
+                
+                sprite.position.set(
+                    sphereRadius * Math.sin(phi) * Math.cos(theta),
+                    sphereRadius * Math.sin(phi) * Math.sin(theta),
+                    sphereRadius * Math.cos(phi)
+                );
+        
+                // 随机大小
+                const size = Math.random() * 0.5 + 0.2;
+                sprite.scale.set(size, size, size);
+        
+                // 随机旋转速度
+                sprite.userData.rotationSpeed = (Math.random() - 0.5) * 0.03;
+        
+                particles.add(sprite);
+            }
+        
+            scene.add(particles);
+        
+            // 5. 动画效果
+            function animate() {
+                requestAnimationFrame(animate);
+        
+                // 球体整体旋转
+                particles.rotation.x += 0.005;
+                particles.rotation.y += 0.008;
+        
+                // 每个粒子独立旋转和闪烁
+                particles.children.forEach((sprite, index) => {
+                    sprite.rotation.z += sprite.userData.rotationSpeed;
+                    const flicker = 0.7 + Math.sin(Date.now() * 0.001 + index) * 0.2;
+                    sprite.material.opacity = flicker;
+                });
+        
+                renderer.render(scene, camera);
+            }
+            animate();
+        
+            // 6. 响应窗口大小变化
+            window.addEventListener('resize', () => {
+                camera.aspect = canvas.clientWidth / canvas.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            });
+        }
+
+        // 页面加载完成后初始化所有Three.js效果
+        document.addEventListener('DOMContentLoaded', () => {
+            initThreeStarfield();
+            initSphereParticles();
+        });
+
+        // --- 数据状态 ---
+        const state = {
+            isLoggedIn: false,
+            images: [], 
+            ideas: [],  
+            dbData: [], 
+            dbPage: 1,
+            dbPageSize: 10
+        };
+
+        // --- Three.js 全局变量 ---
+        let threeApp = {
+            scene: null,
+            camera: null,
+            renderer: null,
+            particles: null,
+            animationId: null,
+            isInitialized: false
+        };
+
+        // --- 初始化模拟数据 ---
+        function initMockData() {
+            const types = ['用户数据', '系统日志', '交易记录'];
+            const statuses = ['active', 'pending', 'error'];
+            for(let i=1; i<=128; i++) {
+                state.dbData.push({
+                    id: 1000 + i,
+                    name: `Data_Entry_${i}_${Math.random().toString(36).substring(7)}`,
+                    type: types[Math.floor(Math.random() * types.length)],
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    date: new Date(Date.now() - Math.floor(Math.random() * 10000000000)).toISOString().split('T')[0]
+                });
+            }
+            state.ideas.push(
+                { id: 1, title: "重构前端架构", content: "使用 Next.js 替换当前的 CRA 架构，提升 SEO 性能。", date: "2023-10-24" },
+                { id: 2, title: "暗黑模式优化", content: "调整对比度，增加更多的主题色配置选项。", date: "2023-10-25" }
+            );
+            updateStats();
+        }
+
+        // --- 核心逻辑 ---
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorMsg = document.getElementById('login-error');
+
+            if (!user || !pass) {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            state.isLoggedIn = true;
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            document.getElementById('dashboard-section').classList.add('flex');
+            
+            initMockData();
+            renderImages();
+            renderIdeas();
+            renderDatabase(1);
+            initCharts();
+        }
+
+        function handleLogout() {
+            state.isLoggedIn = false;
+            document.getElementById('dashboard-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('flex');
+            document.getElementById('login-section').classList.remove('hidden');
+            document.getElementById('login-form').reset();
+            document.getElementById('login-error').classList.add('hidden');
+            
+            // 停止 Three.js 动画以节省资源
+            if (threeApp.animationId) {
+                cancelAnimationFrame(threeApp.animationId);
+            }
+        }
+
+        function switchTab(tabName) {
+            ['dashboard', 'images', 'ideas', 'database'].forEach(t => {
+                document.getElementById(`view-${t}`).classList.add('hidden');
+                const navItem = document.getElementById(`nav-${t}`);
+                if(navItem) navItem.classList.remove('active', 'text-white');
+            });
+
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            
+            const activeNav = document.getElementById(`nav-${tabName}`);
+            if(activeNav) activeNav.classList.add('active', 'text-white');
+
+            const titles = {
+                'dashboard': '仪表盘',
+                'images': '图片库',
+                'ideas': 'Ideas 灵感',
+                'database': '数据库展示'
+            };
+            document.getElementById('page-title').innerText = titles[tabName];
+
+            // 如果切换到数据库页面，初始化或调整 Three.js
+            if (tabName === 'database') {
+                setTimeout(() => {
+                    if (!threeApp.isInitialized) {
+                        initThreeAnimation();
+                    } else {
+                        resizeThree();
+                    }
+                }, 100); // 延时确保 DOM 渲染完成
+            }
+        }
+
+        // --- Three.js 粒子特效逻辑 ---
+        function initThreeAnimation() {
+            const container = document.getElementById('three-container');
+            if (!container) return;
+
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // 1. 场景
+            const scene = new THREE.Scene();
+            // 稍微添加一点雾化效果，让远处粒子变暗
+            scene.fog = new THREE.FogExp2(0x12141d, 0.002);
+
+            // 2. 相机
+            const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+            camera.position.z = 30;
+
+            // 3. 渲染器
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // 4. 粒子几何体 (球状分布算法)
+            const geometry = new THREE.BufferGeometry();
+            const particleCount = 1500;
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+            const color1 = new THREE.Color("#9d00ff"); // Primary
+            const color2 = new THREE.Color("#00f0ff"); // Secondary
+
+            for (let i = 0; i < particleCount; i++) {
+                // 使用球坐标系生成随机点
+                const radius = 12 + Math.random() * 3; // 半径范围 12-15
+                const theta = Math.random() * Math.PI * 2; // 水平角
+                const phi = Math.acos(2 * Math.random() - 1); // 垂直角
+
+                const x = radius * Math.sin(phi) * Math.cos(theta);
+                const y = radius * Math.sin(phi) * Math.sin(theta);
+                const z = radius * Math.cos(phi);
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = z;
+
+                // 随机混合颜色
+                const mixedColor = color1.clone().lerp(color2, Math.random());
+                colors[i * 3] = mixedColor.r;
+                colors[i * 3 + 1] = mixedColor.g;
+                colors[i * 3 + 2] = mixedColor.b;
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            // 5. 材质
+            const material = new THREE.PointsMaterial({
+                size: 0.15,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            });
+
+            // 6. 创建粒子系统
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+
+            // 添加一个线框球体作为背景装饰
+            const sphereGeo = new THREE.SphereGeometry(10, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ 
+                color: 0x333333, 
+                wireframe: true, 
+                transparent: true, 
+                opacity: 0.1 
+            });
+            const wireframeSphere = new THREE.Mesh(sphereGeo, sphereMat);
+            scene.add(wireframeSphere);
+
+            // 保存全局引用
+            threeApp = { scene, camera, renderer, particles, wireframeSphere, isInitialized: true };
+
+            // 7. 动画循环
+            const animate = () => {
+                threeApp.animationId = requestAnimationFrame(animate);
+                
+                if (threeApp.particles) {
+                    threeApp.particles.rotation.y += 0.002;
+                    threeApp.particles.rotation.x += 0.001;
+                }
+                if (threeApp.wireframeSphere) {
+                    threeApp.wireframeSphere.rotation.y -= 0.001;
+                }
+
+                renderer.render(scene, camera);
+            };
+            animate();
+
+            // 8. 监听窗口大小变化
+            window.addEventListener('resize', resizeThree);
+        }
+
+        function resizeThree() {
+            const container = document.getElementById('three-container');
+            if (!container || !threeApp.renderer) return;
+            
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            threeApp.camera.aspect = width / height;
+            threeApp.camera.updateProjectionMatrix();
+            threeApp.renderer.setSize(width, height);
+        }
+
+        // --- 图片管理逻辑 ---
+        function renderImages() {
+            const grid = document.getElementById('image-grid');
+            const empty = document.getElementById('image-empty');
+            grid.innerHTML = '';
+
+            if (state.images.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            state.images.forEach((img, index) => {
+                const div = document.createElement('div');
+                div.className = 'relative group aspect-square bg-neutral rounded-xl overflow-hidden border border-white/5 cursor-pointer';
+                div.innerHTML = `
+                    <img src="${img}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" onclick="viewImage('${img}')">
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button onclick="viewImage('${img}')" class="btn btn-circle btn-sm btn-ghost text-white"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="deleteImage(${index})" class="btn btn-circle btn-sm btn-ghost text-error"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+            updateStats();
+        }
+
+        function handleImageUpload(input) {
+            if (input.files && input.files[0]) {
+                Array.from(input.files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        state.images.push(e.target.result);
+                        renderImages();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        function deleteImage(index) {
+            if(confirm('确定删除这张图片吗？')) {
+                state.images.splice(index, 1);
+                renderImages();
+            }
+        }
+
+        function viewImage(src) {
+            document.getElementById('modal-img-src').src = src;
+            document.getElementById('modal_image_view').showModal();
+        }
+
+        // --- Ideas 逻辑 ---
+        function renderIdeas() {
+            const list = document.getElementById('idea-list');
+            const empty = document.getElementById('idea-empty');
+            list.innerHTML = '';
+
+            if (state.ideas.length === 0) {
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            state.ideas.forEach(idea => {
+                const div = document.createElement('div');
+                div.className = 'card bg-neutral border border-white/5 hover:border-secondary/50 transition-colors';
+                div.innerHTML = `
+                    <div class="card-body p-4">
+                        <div class="flex justify-between items-start">
+                            <h3 class="font-bold text-white text-lg">${idea.title}</h3>
+                            <div class="dropdown dropdown-end">
+                                <label tabindex="0" class="btn btn-ghost btn-xs btn-circle text-gray-400"><i class="fa-solid fa-ellipsis-vertical"></i></label>
+                                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-24 border border-white/10">
+                                    <li><a onclick="openEditIdea(${idea.id})">编辑</a></li>
+                                    <li><a onclick="deleteIdea(${idea.id})" class="text-error">删除</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm mt-2 line-clamp-2">${idea.content}</p>
+                        <div class="text-xs text-gray-600 mt-4 flex items-center gap-2">
+                            <i class="fa-regular fa-clock"></i> ${idea.date}
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+            updateStats();
+        }
+
+        function addIdea() {
+            const title = document.getElementById('idea-title').value;
+            const content = document.getElementById('idea-content').value;
+            if(!title) return alert('请输入标题');
+
+            state.ideas.unshift({
+                id: Date.now(),
+                title,
+                content,
+                date: new Date().toISOString().split('T')[0]
+            });
+            
+            document.getElementById('idea-title').value = '';
+            document.getElementById('idea-content').value = '';
+            renderIdeas();
+        }
+
+        function deleteIdea(id) {
+            if(confirm('确定删除这条灵感吗？')) {
+                state.ideas = state.ideas.filter(i => i.id !== id);
+                renderIdeas();
+            }
+        }
+
+        function openEditIdea(id) {
+            const idea = state.ideas.find(i => i.id === id);
+            if(idea) {
+                document.getElementById('edit-idea-id').value = idea.id;
+                document.getElementById('edit-idea-title').value = idea.title;
+                document.getElementById('edit-idea-content').value = idea.content;
+                document.getElementById('modal_idea_edit').showModal();
+            }
+        }
+
+        function saveIdeaEdit(e) {
+            e.preventDefault(); // 防止表单提交刷新
+            const id = parseInt(document.getElementById('edit-idea-id').value);
+            const title = document.getElementById('edit-idea-title').value;
+            const content = document.getElementById('edit-idea-content').value;
+            
+            const idx = state.ideas.findIndex(i => i.id === id);
+            if(idx !== -1) {
+                state.ideas[idx].title = title;
+                state.ideas[idx].content = content;
+                renderIdeas();
+                document.getElementById('modal_idea_edit').close();
+            }
+        }
+
+        // --- 数据库逻辑 ---
+        function renderDatabase(page) {
+            state.dbPage = page;
+            const filterType = document.getElementById('db-filter').value;
+            
+            let filteredData = state.dbData;
+            if(filterType !== 'all') {
+                filteredData = state.dbData.filter(item => item.type === filterType);
+            }
+
+            const start = (page - 1) * state.dbPageSize;
+            const end = start + state.dbPageSize;
+            const pageData = filteredData.slice(start, end);
+            
+            const tbody = document.getElementById('db-table-body');
+            tbody.innerHTML = '';
+            
+            pageData.forEach(row => {
+                let badgeClass = '';
+                switch(row.status) {
+                    case 'active': badgeClass = 'badge-success'; break;
+                    case 'pending': badgeClass = 'badge-warning'; break;
+                    case 'error': badgeClass = 'badge-error'; break;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-white/5';
+                tr.innerHTML = `
+                    <td class="font-mono text-xs text-gray-500">#${row.id}</td>
+                    <td class="font-bold text-white">${row.name}</td>
+                    <td><span class="badge badge-ghost badge-sm">${row.type}</span></td>
+                    <td><span class="badge ${badgeClass} badge-xs gap-2">${row.status}</span></td>
+                    <td class="text-gray-400 text-sm">${row.date}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('page-num').innerText = `Page ${page}`;
+            updateStats();
+        }
+
+        function changePage(delta) {
+            const newPage = state.dbPage + delta;
+            if(newPage > 0 && newPage <= Math.ceil(state.dbData.length / state.dbPageSize)) {
+                renderDatabase(newPage);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('stat-img-count').innerText = state.images.length;
+            document.getElementById('stat-idea-count').innerText = state.ideas.length;
+            document.getElementById('stat-db-count').innerText = state.dbData.length;
+        }
+
+        // --- 图表初始化 ---
+        function initCharts() {
+            // 柱状图
+            const ctxBar = document.getElementById('chart-bar').getContext('2d');
+            new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['一月', '二月', '三月', '四月', '五月', '六月'],
+                    datasets: [{
+                        label: '数据吞吐量 (MB)',
+                        data: [65, 45, 80, 55, 90, 70],
+                        backgroundColor: 'rgba(157, 0, 255, 0.5)',
+                        borderColor: '#9d00ff',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#9ca3af' } },
+                        x: { grid: { display: false }, ticks: { color: '#9ca3af' } }
+                    }
+                }
+            });
+
+            // 环形图
+            const ctxDoughnut = document.getElementById('chart-doughnut').getContext('2d');
+            new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: ['图片资源', '文档档案', '代码库', '系统日志'],
+                    datasets: [{
+                        data: [35, 20, 30, 15],
+                        backgroundColor: ['#9d00ff', '#00f0ff', '#00ff9d', '#ff2e99'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: { 
+                        legend: { position: 'right', labels: { color: '#9ca3af', usePointStyle: true } } 
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
