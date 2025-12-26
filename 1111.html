@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>皮卡丘粒子汇聚测试</title>
+    <style>
+        body { margin: 0; background: #000; }
+        canvas { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/0.160.0/three.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script>
+        // 基础初始化
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.z = 50;
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 简化的图片解析（只保留核心逻辑）
+        async function getPoints() {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            // 备用皮卡丘图（确保可访问）
+            img.src = "https://p5.music.126.net/obj/wonDlsKUwrLClGjCm8Kx/77405648041/7b38/77c3/cac4/82af610a80261f474534f2f62347ea2b.png";
+            await new Promise(resolve => img.onload = resolve);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 100; canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 100, 100);
+            const pixels = ctx.getImageData(0,0,100,100).data;
+            const points = [];
+
+            for(let i=0; i<pixels.length; i+=4) {
+                if(pixels[i+3] > 10) { // 低阈值，保留更多像素
+                    const idx = i/4;
+                    const x = (idx%100 - 50) * 0.5;
+                    const y = -(Math.floor(idx/100) - 50) * 0.5;
+                    points.push(new THREE.Vector3(x, y, 0));
+                }
+            }
+            return points.slice(0, 5000); // 限制5000个粒子，避免卡顿
+        }
+
+        // 创建粒子+动画
+        async function init() {
+            const points = await getPoints();
+            const geo = new THREE.BufferGeometry().setFromPoints(points);
+            // 初始位置随机分散
+            const pos = geo.attributes.position.array;
+            for(let i=0; i<pos.length; i+=3) {
+                pos[i] = (Math.random()-0.5)*100;
+                pos[i+1] = (Math.random()-0.5)*100;
+                pos[i+2] = (Math.random()-0.5)*100;
+            }
+            geo.attributes.position.needsUpdate = true;
+
+            // 黄色大粒子，肉眼清晰可见
+            const mat = new THREE.PointsMaterial({ color: 0xFFCC00, size: 1.5 });
+            const particles = new THREE.Points(geo, mat);
+            scene.add(particles);
+
+            // 动画：3秒汇聚
+            for(let i=0; i<pos.length; i+=3) {
+                const targetX = points[i/3].x;
+                const targetY = points[i/3].y;
+                const targetZ = points[i/3].z;
+                new TWEEN.Tween({x:pos[i], y:pos[i+1], z:pos[i+2]})
+                    .to({x:targetX, y:targetY, z:targetZ}, 3000)
+                    .delay(Math.random()*1000)
+                    .onUpdate(v => {
+                        pos[i] = v.x;
+                        pos[i+1] = v.y;
+                        pos[i+2] = v.z;
+                        geo.attributes.position.needsUpdate = true;
+                    })
+                    .start();
+            }
+        }
+
+        // 渲染循环
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            renderer.render(scene, camera);
+        }
+
+        // 启动
+        init().then(animate);
+        // 窗口适配
+        window.onresize = () => {
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>
