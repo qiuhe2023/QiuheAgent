@@ -1,0 +1,77 @@
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Animations */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+/* SimpleMDE Dark Theme Overrides */
+.editor-toolbar {
+    border-color: rgba(255,255,255,0.1) !important;
+    background-color: rgba(0,0,0,0.3) !important;
+}
+.editor-toolbar i {
+    color: #ccc !important;
+}
+.editor-toolbar i:hover {
+    color: #fff !important;
+}
+.CodeMirror {
+    background-color: rgba(0,0,0,0.2) !important;
+    border-color: rgba(255,255,255,0.1) !important;
+    color: #eee !important;
+}
+.editor-preview {
+    background-color: #1a1a1a !important;
+    color: #ddd !important;
+}
+
+/* Card Hover Effects */
+.hover-card-effect {
+    transition: all 0.3s ease;
+}
+.hover-card-effect:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+}

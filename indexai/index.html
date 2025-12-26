@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="black">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexAI - Personal AI Brain</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Tailwind & DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Markdown Editor -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Tailwind Config for Custom Colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#8b5cf6',
+                        accent: '#f472b6',
+                        neutral: '#1f2937',
+                        'base-100': '#000000',
+                        'base-200': '#111111',
+                        'base-300': '#1f1f1f',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="font-sans antialiased overflow-hidden text-gray-200 selection:bg-primary selection:text-white">
+
+    <!-- Three.js Background Container -->
+    <div id="canvas-container" class="fixed inset-0 z-0 pointer-events-none opacity-60"></div>
+
+    <!-- App Container -->
+    <div id="app" class="relative z-10 w-full h-screen flex flex-col">
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="flex-1 flex items-center justify-center p-4">
+            <div
+                class="card w-full max-w-md bg-base-200/50 backdrop-blur-xl shadow-2xl border border-white/10 overflow-hidden transform transition-all duration-500 hover:scale-[1.01]">
+                <div class="card-body relative">
+                    <!-- Login Form -->
+                    <div id="login-form" class="space-y-6 transition-all duration-500">
+                        <div class="text-center mb-8">
+                            <h1
+                                class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+                                IndexAI</h1>
+                            <p class="text-gray-400 mt-2 text-sm tracking-wide">ACCESS YOUR ARTIFICIAL BRAIN</p>
+                        </div>
+
+                        <div class="tabs tabs-boxed bg-black/40 p-1 mb-4">
+                            <a class="tab tab-active w-1/2 transition-all">Email</a>
+                            <a class="tab w-1/2 transition-all">Mobile</a>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Identifier</span>
+                            </label>
+                            <input type="text" placeholder="email@example.com"
+                                class="input input-bordered bg-black/30 focus:border-primary/50 transition-colors" />
+                        </div>
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Password</span>
+                            </label>
+                            <input type="password" placeholder="••••••••"
+                                class="input input-bordered bg-black/30 focus:border-primary/50 transition-colors" />
+                            <label class="label">
+                                <span class="label-text-alt link link-hover">Forgot password?</span>
+                            </label>
+                        </div>
+                        <div class="form-control mt-6">
+                            <button
+                                class="btn btn-primary border-none bg-gradient-to-r from-primary to-secondary hover:shadow-lg hover:shadow-primary/20 transition-all font-bold tracking-wide"
+                                onclick="app.auth.login()">INITIALIZE</button>
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <span class="text-sm text-gray-500">New user? <a href="#"
+                                    class="text-primary hover:underline" onclick="app.auth.toggleForm()">Create
+                                    identity</a></span>
+                        </div>
+                    </div>
+
+                    <!-- Register Form (Hidden by default) -->
+                    <div id="register-form"
+                        class="space-y-6 hidden absolute inset-0 bg-base-200/50 backdrop-blur-xl p-8 transition-all duration-500 opacity-0 translate-x-full">
+                        <div class="text-center mb-8">
+                            <h2 class="text-3xl font-bold text-white">Join IndexAI</h2>
+                            <p class="text-gray-400 mt-2 text-sm">Create your digital twin</p>
+                        </div>
+
+                        <div class="form-control">
+                            <input type="text" placeholder="Nickname" class="input input-bordered bg-black/30 mb-3" />
+                            <input type="email" placeholder="Email" class="input input-bordered bg-black/30 mb-3" />
+                            <input type="password" placeholder="Password"
+                                class="input input-bordered bg-black/30 mb-3" />
+                        </div>
+
+                        <div class="form-control mt-6">
+                            <button class="btn btn-secondary w-full" onclick="app.auth.register()">REGISTER</button>
+                        </div>
+                        <div class="text-center mt-4">
+                            <a href="#" class="text-sm text-gray-500 hover:text-white"
+                                onclick="app.auth.toggleForm()">Back to Login</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (Hidden by default) -->
+        <div id="main-dashboard" class="hidden h-screen flex overflow-hidden bg-gradient-to-br from-black to-base-300">
+
+            <!-- Sidebar -->
+            <aside
+                class="w-20 lg:w-64 bg-black/40 backdrop-blur-md border-r border-white/5 flex flex-col transition-all duration-300 z-20">
+                <div class="p-6 flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded bg-gradient-to-tr from-primary to-accent flex items-center justify-center text-white font-bold">
+                        I</div>
+                    <span class="font-bold text-xl hidden lg:block tracking-wider">IndexAI</span>
+                </div>
+
+                <nav class="flex-1 px-4 space-y-2 mt-8">
+                    <a href="#"
+                        class="nav-item active flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group"
+                        data-view="dashboard">
+                        <i class="fas fa-chart-pie w-5 group-hover:text-primary transition-colors"></i>
+                        <span class="hidden lg:block">Overview</span>
+                    </a>
+                    <a href="#"
+                        class="nav-item flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group"
+                        data-view="images">
+                        <i class="fas fa-images w-5 group-hover:text-accent transition-colors"></i>
+                        <span class="hidden lg:block">Gallery</span>
+                    </a>
+                    <a href="#"
+                        class="nav-item flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group"
+                        data-view="ideas">
+                        <i class="fas fa-lightbulb w-5 group-hover:text-yellow-400 transition-colors"></i>
+                        <span class="hidden lg:block">Ideas</span>
+                    </a>
+                    <a href="#"
+                        class="nav-item flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-all group"
+                        data-view="knowledge">
+                        <i class="fas fa-brain w-5 group-hover:text-purple-400 transition-colors"></i>
+                        <span class="hidden lg:block">Knowledge</span>
+                    </a>
+                </nav>
+
+                <div class="p-4 border-t border-white/5">
+                    <button
+                        class="flex items-center gap-3 w-full px-4 py-3 rounded-xl hover:bg-red-500/10 text-gray-400 hover:text-red-400 transition-all"
+                        onclick="app.auth.logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span class="hidden lg:block">Disconnect</span>
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 flex flex-col relative overflow-hidden">
+                <!-- Topbar -->
+                <header class="h-16 bg-transparent flex items-center justify-between px-8 z-20">
+                    <div class="text-sm breadcrumbs text-gray-400">
+                        <ul>
+                            <li>Dashboard</li>
+                            <li id="current-view-name" class="text-white">Overview</li>
+                        </ul>
+                    </div>
+
+                    <div class="flex items-center gap-6">
+                        <button class="btn btn-ghost btn-circle btn-sm">
+                            <div class="indicator">
+                                <i class="fas fa-bell text-gray-400"></i>
+                                <span class="badge badge-xs badge-primary indicator-item"></span>
+                            </div>
+                        </button>
+                        <div class="dropdown dropdown-end">
+                            <label tabindex="0" class="btn btn-ghost btn-circle avatar border border-white/10">
+                                <div class="w-10 rounded-full">
+                                    <img src="https://ui-avatars.com/api/?name=User&background=random" />
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Content Scroll Area -->
+                <div class="flex-1 overflow-y-auto px-8 pb-8 scrollbar-hide" id="content-area">
+                    <!-- Dynamic Content Injected Here -->
+                </div>
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
