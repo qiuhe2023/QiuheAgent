@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js 星空效果</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script>
+        // ======== 以下代码可以直接复制到HTML里运行 ========
+        // 初始化场景，设置深邃的黑色背景
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000); // 纯黑色背景，模拟宇宙深空
+        
+        // 初始化相机（视野角75度，宽高比，近裁剪面，远裁剪面）
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2500);
+        camera.position.z = 300; // 拉近相机，让粒子看起来更大
+        
+        // 初始化渲染器
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        
+        // ======== 创建星空 ========
+        // 用现代方式创建点云（避免旧版Geometry的警告）
+        const starsGeometry = new THREE.BufferGeometry();
+        const starsCount = 100; // 减少粒子数量到1000，让单个星星更加突出
+        const starsPositions = new Float32Array(starsCount * 3);
+        const starsColors = new Float32Array(starsCount * 3);
+        const starsOriginalT = new Float32Array(starsCount); // 存储每个粒子的原始t参数
+        const starsOriginalOffset = new Float32Array(starsCount * 3); // 存储每个粒子的原始偏移量
+        
+        // 高斯分布函数，用于生成中心密集的星星
+        function gaussianRandom(mean, stdDev) {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random(); // 转换到(0,1]
+            while(v === 0) v = Math.random();
+            return mean + stdDev * Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+        
+        // 计算给定点到贝塞尔曲线的距离
+        function distanceToBezierCurve(point, curve, samples = 50) {
+            let minDistance = Infinity;
+            
+            // 在曲线上取多个点，计算到给定点的最小距离
+            for (let i = 0; i <= samples; i++) {
+                const t = i / samples;
+                const curvePoint = curve.getPoint(t);
+                const distance = curvePoint.distanceTo(point);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
+            
+            return minDistance;
+        }
+        
+        // 根据位置和距离参考线的距离创建更自然的星团和颜色分布
+        function getColorClusterByPosition(x, y, z, distanceToCurve) {
+            // 创建更自然的星团分布，银河中心区域更多白色和蓝色
+            const distanceFromCenter = Math.sqrt(x * x + y * y) / 300;
+            
+            // 靠近参考线的区域（距离曲线较近）更多白色和蓝色星星
+            if (distanceToCurve < 100) {
+                if (Math.random() > 0.2) {
+                    return Math.floor(Math.random() * 2); // 0或1（白色或蓝色）
+                }
+            }
+            // 中心区域也更多白色和蓝色星星
+            else if (distanceFromCenter < 0.5) {
+                if (Math.random() > 0.4) {
+                    return Math.floor(Math.random() * 2); // 0或1（白色或蓝色）
+                }
+            }
+            return Math.floor(Math.random() * 4);
+        }
+        
+        // 定义参考线的贝塞尔曲线
+        const referenceCurve = new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(-1500, 0, 0),    // 起点：左侧
+            new THREE.Vector3(0, 200, 0),       // 控制点：中心上方200单位，形成向上凸的弧度
+            new THREE.Vector3(1500, 0, 0)       // 终点：右侧
+        );
+        
+        for (let i = 0; i < starsCount; i++) {
+            const i3 = i * 3;
+            
+            // 1. 调整t的分布，让更多粒子集中在曲线中间区域（使用二次分布）
+            let t;
+            if (Math.random() < 0.7) {
+                // 70%的粒子集中在中间区域[0.3, 0.7]
+                t = 0.3 + Math.random() * 0.4;
+            } else {
+                // 30%的粒子分布在两侧区域[-0.1, 1.1]
+                t = (Math.random() - 0.5) * 1.2;
+            }
+            
+            // 2. 获取参考线上的点
+            const referencePoint = referenceCurve.getPoint(t);
+            
+            // 3. 在垂直于参考线的方向添加高斯分布偏移
+            // 距离参考线越近，概率越高
+            const yOffset = gaussianRandom(0, 50); // 减小标准差，让粒子更靠近参考线
+            
+            // 4. Z轴：减小深度范围，增强平面效果，让粒子更集中
+            const zDepth = (Math.random() - 0.5) * 100; // 深度范围：-50到50
+            
+            // 5. 保存粒子位置
+            starsPositions[i3] = referencePoint.x;
+            starsPositions[i3 + 1] = referencePoint.y + yOffset;
+            starsPositions[i3 + 2] = zDepth;
+            
+            // 保存原始t参数和偏移量，用于动画
+            starsOriginalT[i] = t;
+            starsOriginalOffset[i3] = 0; // X轴偏移为0
+            starsOriginalOffset[i3 + 1] = yOffset; // Y轴原始偏移
+            starsOriginalOffset[i3 + 2] = zDepth; // Z轴原始偏移
+            
+            // 简化距离计算：直接计算垂直距离（Y轴方向），提高性能
+            // 由于粒子是基于参考线参数t生成的，我们可以直接使用相同的t获取参考点
+            const referencePointForDistance = referenceCurve.getPoint(t);
+            const distanceToCurve = Math.abs(starsPositions[i3 + 1] - referencePointForDistance.y);
+            
+            // 根据距离参考线的远近调整星星亮度，越靠近参考线越亮
+            const distanceFactor = 1 - Math.min(distanceToCurve / 200, 1.0); // 减小距离阈值，增强效果
+            const brightness = 1.0 + distanceFactor * 2.0; // 靠近参考线的区域更亮
+            
+            // 根据位置和距离参考线的距离获取星团颜色类型，创建更真实的银河色彩
+            const colorCluster = getColorClusterByPosition(starsPositions[i3], starsPositions[i3 + 1], starsPositions[i3 + 2], distanceToCurve);
+            
+            switch(colorCluster) {
+                case 0:
+                    // 蓝色星团 - 银河中的蓝色区域
+                    starsColors[i3] = brightness * 0.3; // R
+                    starsColors[i3 + 1] = brightness * 0.5; // G
+                    starsColors[i3 + 2] = brightness * 1.0; // B
+                    break;
+                case 1:
+                    // 白色星团 - 银河中心的亮白色区域
+                    starsColors[i3] = brightness * 1.0; // R
+                    starsColors[i3 + 1] = brightness * 1.0; // G
+                    starsColors[i3 + 2] = brightness * 0.9; // B
+                    break;
+                case 2:
+                    // 紫色星团 - 银河中的紫色区域
+                    starsColors[i3] = brightness * 0.7; // R
+                    starsColors[i3 + 1] = brightness * 0.3; // G
+                    starsColors[i3 + 2] = brightness * 1.0; // B
+                    break;
+                case 3:
+                    // 黄色星团 - 银河边缘的黄色区域
+                    starsColors[i3] = brightness * 1.0; // R
+                    starsColors[i3 + 1] = brightness * 0.8; // G
+                    starsColors[i3 + 2] = brightness * 0.4; // B
+                    break;
+            }
+            
+            // 添加一些特别亮的星星作为点缀
+            if (Math.random() > 0.97) {
+                starsColors[i3] *= 2.0;
+                starsColors[i3 + 1] *= 2.0;
+                starsColors[i3 + 2] *= 2.0;
+            }
+        }
+        
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starsPositions, 3));
+        starsGeometry.setAttribute('color', new THREE.BufferAttribute(starsColors, 3));
+        
+        // 简化材质设置，使用默认的大小衰减，不尝试自定义shader
+        const starsMaterial = new THREE.PointsMaterial({ 
+            size: 6, // 基础大小
+            transparent: true,
+            opacity: 1.0, // 完全不透明，增强视觉效果
+            sizeAttenuation: true, // 开启衰减，增强深度感
+            vertexColors: true // 使用顶点颜色
+        });
+        
+        const stars = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(stars);
+        
+        // ======== 添加圆弧参考线 ========
+        // 使用已经定义的参考曲线
+        const curve = referenceCurve;
+        
+        // 从曲线上生成30个点，确保曲线平滑
+        const curvePoints = curve.getPoints(30);
+        
+        // 创建曲线的几何体
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints(curvePoints);
+        
+        // 创建参考线的材质
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0xff0000, // 红色线条
+            linewidth: 2     // 线宽
+        });
+        
+        // 创建线条对象并添加到场景
+        const referenceLine = new THREE.Line(lineGeometry, lineMaterial);
+        // 倾斜5度（将角度转换为弧度：5° * Math.PI / 180°）
+        referenceLine.rotation.z = Math.PI / 36;
+        scene.add(referenceLine);
+        
+        // ======== 移除银河平面，只保留星星 ========
+        
+        // ======== 添加光源 ========
+        // 深蓝色环境光，模拟宇宙深空
+        const ambientLight = new THREE.AmbientLight(0x050515);
+        scene.add(ambientLight);
+        
+        // 添加多个点光源，增强银河色彩效果
+        const blueLight = new THREE.PointLight(0x2040ff, 0.2);
+        blueLight.position.set(-800, 0, 600);
+        scene.add(blueLight);
+        
+        const purpleLight = new THREE.PointLight(0x8020ff, 0.2);
+        purpleLight.position.set(800, 0, 600);
+        scene.add(purpleLight);
+        
+        const whiteLight = new THREE.PointLight(0xffffff, 0.3);
+        whiteLight.position.set(0, 0, 1200);
+        scene.add(whiteLight);
+        
+        // 添加中心区域的增强光，突出银河中心
+        const centerLight = new THREE.PointLight(0xffffcc, 0.3);
+        centerLight.position.set(0, 0, 800);
+        scene.add(centerLight);
+        
+        // ======== 动画循环 ========
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 让星空围绕Y轴缓慢旋转，营造流动感
+            stars.rotation.y += 0.0005;
+            
+            // 同时让星空围绕X轴有轻微的旋转，增加动态效果
+            stars.rotation.x += 0.0002;
+            
+            // 参考线也跟随旋转，保持视觉一致性
+            referenceLine.rotation.y += 0.0005;
+            referenceLine.rotation.x += 0.0002;
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+        
+        // ======== 响应窗口变化 ========
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // ======== 鼠标滚轮控制 ========
+        // 监听鼠标滚轮事件，控制相机距离（放大缩小）
+        window.addEventListener('wheel', (event) => {
+            // 滚轮滚动量，负值表示向上滚动（放大），正值表示向下滚动（缩小）
+            const delta = event.deltaY;
+            
+            // 调整相机z轴位置，限制在合理范围内
+            camera.position.z += delta * 0.5;
+            camera.position.z = Math.max(300, Math.min(2000, camera.position.z));
+            
+            // 同时调整星星材质的不透明度，距离越近越亮
+            const opacity = 0.5 + (1500 - camera.position.z) / 3000;
+            starsMaterial.opacity = Math.max(0.3, Math.min(1.0, opacity));
+        });
+    </script>
+</body>
+</html>
